@@ -1,12 +1,10 @@
-import express, { type Express, type Request, type Response } from "express";
+import app from "./app";
 import { PORT } from "./envhandler";
 
-const app: Express = express();
+const startServer = () => {
+  app.listen(PORT, () => {
+    console.log(`Server up and running http://localhost:${PORT}`);
+  });
+};
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Hello World!");
-});
-
-app.listen(PORT, () => {
-  console.log(`Server up and running http://localhost:${PORT}`);
-});
+startServer();
