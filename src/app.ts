@@ -3,6 +3,7 @@ import router from "./routes/router";
 
 const app: Express = express();
 
+app.use(express.json());
 app.use("/api", router);
 
 app.get("/", (req: Request, res: Response) => {
