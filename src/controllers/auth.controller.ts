@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { db } from "../db";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../envhandler";
 
 interface ISignup {
   email: string;
@@ -32,7 +34,6 @@ export const signup = async (req: SignupRequest, res: Response) => {
       },
     });
 
-    // Exclude password from the response
     const { password: _, ...userWithoutPassword } = newUser;
 
     return res.status(201).json({
@@ -71,9 +72,14 @@ export const login = async (req: LoginRequest, res: Response) => {
 
     const { password: _, ...userWithoutPassword } = user;
 
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
     return res.status(200).json({
       message: "User logged in successfully",
       user: userWithoutPassword,
+      token,
     });
   } catch (error) {
     console.error("Error during login:", error);
