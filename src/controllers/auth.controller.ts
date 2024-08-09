@@ -1,56 +1,82 @@
 import type { Request, Response } from "express";
 import { db } from "../db";
+import bcrypt from "bcrypt";
 
-export const signup = async (req: Request, res: Response) => {
+interface ISignup {
+  email: string;
+  password: string;
+  name?: string;
+}
+
+type SignupRequest = Request<{}, {}, ISignup>;
+
+export const signup = async (req: SignupRequest, res: Response) => {
   const { email, password, name } = req.body;
 
   try {
-    let user = await db.user.findUnique({
-      where: {
-        email: email,
-      },
+    const existingUser = await db.user.findUnique({
+      where: { email },
     });
 
-    if (user) {
+    if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    user = await db.user.create({
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await db.user.create({
       data: {
         email,
         name,
-        password,
+        password: hashedPassword,
       },
     });
 
-    res.status(201).json({ message: "User created successfully", user });
+    // Exclude password from the response
+    const { password: _, ...userWithoutPassword } = newUser;
+
+    return res.status(201).json({
+      message: "User created successfully",
+      user: userWithoutPassword,
+    });
   } catch (error) {
     console.error("Error during signup:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+interface ILogin {
+  email: string;
+  password: string;
+}
+
+type LoginRequest = Request<{}, {}, ILogin>;
+
+export const login = async (req: LoginRequest, res: Response) => {
   const { email, password } = req.body;
 
-  console.log(email, password);
-
   try {
-    const user = await db.user.findFirst({
-      where: { email: email },
+    const user = await db.user.findUnique({
+      where: { email },
     });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.password !== password) {
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    res.status(200).json({ message: "User logged in successfully", user });
+    const { password: _, ...userWithoutPassword } = user;
+
+    return res.status(200).json({
+      message: "User logged in successfully",
+      user: userWithoutPassword,
+    });
   } catch (error) {
     console.error("Error during login:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
