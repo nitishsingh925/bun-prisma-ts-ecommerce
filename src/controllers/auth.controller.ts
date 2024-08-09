@@ -15,7 +15,6 @@ export const signup = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Corrected: Wrap email and password inside the `data` object
     user = await db.user.create({
       data: {
         email,
@@ -31,6 +30,27 @@ export const signup = async (req: Request, res: Response) => {
   }
 };
 
-export const login = (req: Request, res: Response) => {
-  res.status(200).json({ message: "this is login method" });
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  console.log(email, password);
+
+  try {
+    const user = await db.user.findFirst({
+      where: { email: email },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.password !== password) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    res.status(200).json({ message: "User logged in successfully", user });
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
