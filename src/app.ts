@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response } from "express";
 import router from "./routes/router";
+import { errorMiddleware } from "./middlewares/errors.middleware";
 
 const app: Express = express();
 
@@ -12,5 +13,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use((req, res: Response) => {
   res.status(404).json({ message: "Route not found" });
 });
+
+app.use(errorMiddleware);
 
 export default app;

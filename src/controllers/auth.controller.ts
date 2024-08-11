@@ -1,7 +1,9 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { db } from "../db";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../envhandler";
+import { BadRequestsException } from "../exception/bad-requesta";
+import { ErrorCode } from "../exception/root";
 
 interface ISignup {
   email: string;
@@ -11,7 +13,11 @@ interface ISignup {
 
 type SignupRequest = Request<{}, {}, ISignup>;
 
-export const signup = async (req: SignupRequest, res: Response) => {
+export const signup = async (
+  req: SignupRequest,
+  res: Response,
+  next: NextFunction
+) => {
   const { email, password, name } = req.body;
 
   try {
@@ -20,7 +26,12 @@ export const signup = async (req: SignupRequest, res: Response) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return next(
+        new BadRequestsException(
+          "User already exists",
+          ErrorCode.USER_ALREADY_EXISTS
+        )
+      );
     }
 
     const hashedPassword = await Bun.password.hash(password);
@@ -39,7 +50,13 @@ export const signup = async (req: SignupRequest, res: Response) => {
       message: "User created successfully",
       user: userWithoutPassword,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      // Handle unique constraint error
+      return res.status(409).json({
+        message: "User with this email already exists.",
+      });
+    }
     console.error("Error during signup:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
